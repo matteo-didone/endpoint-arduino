@@ -53,9 +53,9 @@ def setup_serial():
         return False
 
 # Configurazione MQTT
-MQTT_BROKER = "localhost"
+MQTT_BROKER = "broker.hivemq.com"  # Broker pubblico
 MQTT_PORT = 1883
-MQTT_TOPIC = "arduino/display/message"
+MQTT_TOPIC = "arduino/matteo/display/message"  # Topic personalizzato per evitare conflitti
 MAX_MESSAGE_LENGTH = 256
 
 # Configura il client MQTT
@@ -63,7 +63,7 @@ mqtt_client = mqtt.Client(protocol=mqtt.MQTTv5)
 
 def on_connect(client, userdata, flags, rc, properties=None):
     if rc == 0:
-        print("Connesso al broker MQTT")
+        print(f"Connesso al broker MQTT: {MQTT_BROKER}")
     else:
         print(f"Errore di connessione al broker MQTT. Codice: {rc}")
 
@@ -113,13 +113,11 @@ async def send_message(message: Message):
         # Invia sulla porta seriale
         if serial_port and serial_port.is_open:
             try:
-                # Aggiungi un newline alla fine del messaggio
                 serial_message = message.message + '\n'
                 serial_port.write(serial_message.encode())
                 print(f"Messaggio inviato sulla porta seriale: {message.message}")
             except Exception as e:
                 print(f"Errore nell'invio seriale: {e}")
-                # Prova a riconnettere
                 setup_serial()
         else:
             print("Porta seriale non disponibile")
@@ -131,6 +129,7 @@ async def send_message(message: Message):
             "details": {
                 "length": len(message.message),
                 "topic": MQTT_TOPIC,
+                "mqtt_broker": MQTT_BROKER,
                 "serial_connected": bool(serial_port and serial_port.is_open)
             }
         }
@@ -144,19 +143,10 @@ async def send_message(message: Message):
 async def check_status():
     return {
         "mqtt_connected": mqtt_client.is_connected(),
+        "mqtt_broker": MQTT_BROKER,
+        "mqtt_topic": MQTT_TOPIC,
         "serial_connected": bool(serial_port and serial_port.is_open),
-        "max_message_length": MAX_MESSAGE_LENGTH,
-        "broker": MQTT_BROKER,
-        "topic": MQTT_TOPIC
-    }
-
-# Endpoint per ricaricare la connessione seriale
-@app.post("/api/reload-serial")
-async def reload_serial():
-    success = setup_serial()
-    return {
-        "success": success,
-        "serial_connected": bool(serial_port and serial_port.is_open)
+        "max_message_length": MAX_MESSAGE_LENGTH
     }
 
 if __name__ == "__main__":
