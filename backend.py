@@ -8,7 +8,8 @@ from pydantic import BaseModel, field_validator
 import paho.mqtt.client as mqtt
 import serial
 import serial.tools.list_ports
-from typing import Optional
+from typing import Optional, List
+from datetime import datetime
 
 # Configurazione FastAPI
 app = FastAPI()
@@ -25,6 +26,52 @@ app.add_middleware(
 # Configurazione Serial
 BAUD_RATE = 115200
 serial_port = None
+MAX_NICKNAME_LENGTH = 20
+MAX_MESSAGE_LENGTH = 200  # Aumentato per gestire il messaggio completo
+
+# Store in memoria per i messaggi
+message_history = []
+MAX_HISTORY_SIZE = 100
+
+class Message(BaseModel):
+    message: str
+    nickname: str
+
+    @field_validator('message')
+    def validate_message(cls, v):
+        if not v:
+            raise ValueError('Il messaggio non può essere vuoto')
+        if len(v) > MAX_MESSAGE_LENGTH:
+            raise ValueError(f'Il messaggio non può superare i {MAX_MESSAGE_LENGTH} caratteri')
+        return v.strip()
+
+    @field_validator('nickname')
+    def validate_nickname(cls, v):
+        if not v:
+            raise ValueError('Il nickname non può essere vuoto')
+        if len(v) > MAX_NICKNAME_LENGTH:
+            raise ValueError(f'Il nickname non può superare i {MAX_NICKNAME_LENGTH} caratteri')
+        return v.strip()
+
+class StoredMessage(BaseModel):
+    message: str
+    nickname: str
+    timestamp: datetime
+    display_text: str  # Testo effettivamente mostrato sul display
+
+def format_display_message(nickname: str, message: str) -> str:
+    """
+    Formatta il messaggio per il display LCD.
+    Il formato è 'nickname: messaggio' ma assicura che sia ottimizzato per il display
+    """
+    # Rimuovi spazi extra e caratteri non necessari
+    nickname = nickname.strip()
+    message = message.strip()
+    
+    # Formatta il messaggio
+    display_text = f"{nickname}: {message}"
+    
+    return display_text
 
 def find_arduino():
     """Cerca la porta seriale dell'Arduino"""
@@ -53,12 +100,10 @@ def setup_serial():
         return False
 
 # Configurazione MQTT
-MQTT_BROKER = "broker.hivemq.com"  # Broker pubblico
+MQTT_BROKER = "broker.hivemq.com"
 MQTT_PORT = 1883
-MQTT_TOPIC = "arduino/matteo/display/message"  # Topic personalizzato per evitare conflitti
-MAX_MESSAGE_LENGTH = 256
+MQTT_TOPIC = "arduino/matteo/display/message"
 
-# Configura il client MQTT
 mqtt_client = mqtt.Client(protocol=mqtt.MQTTv5)
 
 def on_connect(client, userdata, flags, rc, properties=None):
@@ -70,52 +115,52 @@ def on_connect(client, userdata, flags, rc, properties=None):
 def on_disconnect(client, userdata, rc, properties=None):
     print(f"Disconnesso dal broker MQTT con codice: {rc}")
 
-# Assegna i callback
 mqtt_client.on_connect = on_connect
 mqtt_client.on_disconnect = on_disconnect
 
-# Connetti al broker MQTT
 try:
     mqtt_client.connect(MQTT_BROKER, MQTT_PORT, 60)
     mqtt_client.loop_start()
 except Exception as e:
     print(f"Errore nella connessione MQTT: {e}")
 
-# Setup iniziale seriale
 setup_serial()
 
-# Modello per il messaggio
-class Message(BaseModel):
-    message: str
+def add_to_history(message: Message, display_text: str):
+    """Aggiunge un messaggio alla cronologia"""
+    stored_message = StoredMessage(
+        message=message.message,
+        nickname=message.nickname,
+        timestamp=datetime.now(),
+        display_text=display_text
+    )
+    message_history.append(stored_message)
+    
+    # Mantieni solo gli ultimi MAX_HISTORY_SIZE messaggi
+    if len(message_history) > MAX_HISTORY_SIZE:
+        message_history.pop(0)
 
-    @field_validator('message')
-    def validate_message_length(cls, v):
-        if len(v) > MAX_MESSAGE_LENGTH:
-            raise ValueError(f'Il messaggio non puo superare i {MAX_MESSAGE_LENGTH} caratteri')
-        if len(v) == 0:
-            raise ValueError('Il messaggio non puo essere vuoto')
-        return v
-
-# Route per la home page
 @app.get("/")
 async def read_root():
     return FileResponse('index.html')
 
-# Route API
 @app.post("/api/arduino-message")
 async def send_message(message: Message):
     try:
+        # Formatta il messaggio per il display
+        display_text = format_display_message(message.nickname, message.message)
+        
         # Pubblica su MQTT
-        result = mqtt_client.publish(MQTT_TOPIC, message.message)
+        result = mqtt_client.publish(MQTT_TOPIC, display_text)
         result.wait_for_publish()
-        print(f"Pubblicazione messaggio MQTT: '{message.message}' sul topic: {MQTT_TOPIC}")
+        print(f"Pubblicazione messaggio MQTT: '{display_text}' sul topic: {MQTT_TOPIC}")
         
         # Invia sulla porta seriale
         if serial_port and serial_port.is_open:
             try:
-                serial_message = message.message + '\n'
+                serial_message = display_text + '\n'
                 serial_port.write(serial_message.encode())
-                print(f"Messaggio inviato sulla porta seriale: {message.message}")
+                print(f"Messaggio inviato sulla porta seriale: {display_text}")
             except Exception as e:
                 print(f"Errore nell'invio seriale: {e}")
                 setup_serial()
@@ -123,11 +168,15 @@ async def send_message(message: Message):
             print("Porta seriale non disponibile")
             setup_serial()
         
+        # Aggiungi alla cronologia
+        add_to_history(message, display_text)
+        
         return {
             "success": True,
             "message": "Messaggio inviato con successo",
             "details": {
-                "length": len(message.message),
+                "display_text": display_text,
+                "length": len(display_text),
                 "topic": MQTT_TOPIC,
                 "mqtt_broker": MQTT_BROKER,
                 "serial_connected": bool(serial_port and serial_port.is_open)
@@ -138,7 +187,18 @@ async def send_message(message: Message):
         print(f"Errore durante l'invio del messaggio: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
 
-# Endpoint per verificare lo stato
+@app.get("/api/messages", response_model=List[StoredMessage])
+async def get_messages():
+    """Recupera la cronologia dei messaggi"""
+    return message_history
+
+@app.delete("/api/messages")
+async def clear_messages():
+    """Cancella la cronologia dei messaggi"""
+    global message_history
+    message_history = []
+    return {"success": True, "message": "Cronologia messaggi cancellata"}
+
 @app.get("/api/status")
 async def check_status():
     return {
@@ -146,7 +206,9 @@ async def check_status():
         "mqtt_broker": MQTT_BROKER,
         "mqtt_topic": MQTT_TOPIC,
         "serial_connected": bool(serial_port and serial_port.is_open),
-        "max_message_length": MAX_MESSAGE_LENGTH
+        "max_message_length": MAX_MESSAGE_LENGTH,
+        "max_nickname_length": MAX_NICKNAME_LENGTH,
+        "message_count": len(message_history)
     }
 
 if __name__ == "__main__":

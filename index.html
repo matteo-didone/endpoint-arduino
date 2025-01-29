@@ -58,9 +58,28 @@
             border: 1px solid rgba(239, 68, 68, 0.4);
         }
 
-        textarea {
+        .message-history {
+            max-height: 300px;
+            overflow-y: auto;
+        }
+
+        .message-history::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        .message-history::-webkit-scrollbar-track {
+            background: rgba(30, 58, 138, 0.3);
+            border-radius: 4px;
+        }
+
+        .message-history::-webkit-scrollbar-thumb {
+            background: rgba(59, 130, 246, 0.5);
+            border-radius: 4px;
+        }
+
+        textarea,
+        input {
             color: #1e3a8a !important;
-            /* Blu scuro */
         }
     </style>
 </head>
@@ -71,48 +90,131 @@
     <div class="geometric-shape w-20 h-20 top-20 left-20 floating" style="animation-delay: -2s;"></div>
     <div class="geometric-shape w-16 h-16 bottom-20 right-20 floating" style="animation-delay: -1s;"></div>
 
-    <!-- Card principale -->
-    <div class="glass-effect rounded-xl p-8 w-full max-w-md relative shadow-2xl border border-blue-400/20">
-        <div class="text-center mb-8">
-            <h1 class="text-blue-100 text-3xl font-bold mb-4 tracking-wider">MESSAGGIO ARDUINO</h1>
-            <p class="text-blue-200 text-sm">Scrivi il messaggio che vuoi visualizzare sul display dell'Arduino</p>
-        </div>
-
-        <!-- Status Message -->
-        <div id="status" class="status-message mb-6 p-4 rounded-lg text-center hidden">
-            <p class="text-lg font-semibold"></p>
-        </div>
-
-        <form class="space-y-6" id="messageForm">
-            <div class="group">
-                <textarea id="message" placeholder="Il tuo messaggio..." rows="3" maxlength="100"
-                    class="w-full bg-white/90 border-2 border-blue-300/30 px-4 py-3 text-lg placeholder-blue-400/70 focus:outline-none focus:border-blue-300/60 rounded-lg transition-all duration-300"></textarea>
-                <div class="text-blue-200 text-xs mt-2 text-right">
-                    <span id="charCount">0</span>/100 caratteri
-                </div>
-            </div>
-
-            <div class="text-center">
-                <button type="submit"
-                    class="bg-blue-600/50 backdrop-blur-sm px-8 py-3 rounded-lg text-blue-100 font-semibold hover:bg-blue-500/50 transition-all duration-300 inline-flex items-center group shadow-lg hover:shadow-xl transform hover:-translate-y-0.5">
-                    INVIA
-                    <svg xmlns="http://www.w3.org/2000/svg"
-                        class="h-4 w-4 ml-2 group-hover:translate-x-1 transition-transform" fill="none"
-                        viewBox="0 0 24 24" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                            d="M14 5l7 7m0 0l-7 7m7-7H3" />
-                    </svg>
+    <!-- Container principale -->
+    <div class="w-full max-w-4xl space-y-6">
+        <!-- Sezione Nickname -->
+        <div id="nicknameSection" class="glass-effect rounded-xl p-6 relative shadow-2xl border border-blue-400/20">
+            <h2 class="text-blue-100 text-xl font-semibold mb-4">Il tuo Nickname</h2>
+            <div class="flex gap-4">
+                <input type="text" id="nickname" placeholder="Inserisci il tuo nickname..."
+                    class="flex-1 bg-white/90 border-2 border-blue-300/30 px-4 py-2 rounded-lg focus:outline-none focus:border-blue-300/60">
+                <button id="saveNickname"
+                    class="bg-blue-600/50 backdrop-blur-sm px-6 py-2 rounded-lg text-blue-100 font-semibold hover:bg-blue-500/50 transition-all duration-300">
+                    Salva
                 </button>
             </div>
-        </form>
+            <div id="currentNickname" class="mt-2 text-blue-200 hidden">
+                Nickname attuale: <span class="font-semibold"></span>
+                <button id="editNickname" class="ml-2 text-blue-300 hover:text-blue-100 text-sm">
+                    Modifica
+                </button>
+            </div>
+        </div>
+
+        <!-- Card principale -->
+        <div class="glass-effect rounded-xl p-8 relative shadow-2xl border border-blue-400/20">
+            <div class="text-center mb-8">
+                <h1 class="text-blue-100 text-3xl font-bold mb-4 tracking-wider">MESSAGGIO ARDUINO</h1>
+                <p class="text-blue-200 text-sm">Scrivi il messaggio che vuoi visualizzare sul display dell'Arduino</p>
+            </div>
+
+            <!-- Status Message -->
+            <div id="status" class="status-message mb-6 p-4 rounded-lg text-center hidden">
+                <p class="text-lg font-semibold"></p>
+            </div>
+
+            <form class="space-y-6" id="messageForm">
+                <div class="group">
+                    <textarea id="message" placeholder="Il tuo messaggio..." rows="3" maxlength="100"
+                        class="w-full bg-white/90 border-2 border-blue-300/30 px-4 py-3 text-lg placeholder-blue-400/70 focus:outline-none focus:border-blue-300/60 rounded-lg transition-all duration-300"></textarea>
+                    <div class="text-blue-200 text-xs mt-2 text-right">
+                        <span id="charCount">0</span>/100 caratteri
+                    </div>
+                </div>
+
+                <div class="text-center">
+                    <button type="submit"
+                        class="bg-blue-600/50 backdrop-blur-sm px-8 py-3 rounded-lg text-blue-100 font-semibold hover:bg-blue-500/50 transition-all duration-300 inline-flex items-center group shadow-lg hover:shadow-xl transform hover:-translate-y-0.5">
+                        INVIA
+                        <svg xmlns="http://www.w3.org/2000/svg"
+                            class="h-4 w-4 ml-2 group-hover:translate-x-1 transition-transform" fill="none"
+                            viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M14 5l7 7m0 0l-7 7m7-7H3" />
+                        </svg>
+                    </button>
+                </div>
+            </form>
+        </div>
+
+        <!-- Sezione Cronologia Messaggi -->
+        <div class="glass-effect rounded-xl p-8 relative shadow-2xl border border-blue-400/20">
+            <div class="flex justify-between items-center mb-4">
+                <h2 class="text-blue-100 text-xl font-semibold">Cronologia Messaggi</h2>
+                <button id="clearHistory"
+                    class="bg-red-600/50 backdrop-blur-sm px-4 py-2 rounded-lg text-red-100 text-sm font-semibold hover:bg-red-500/50 transition-all duration-300 flex items-center gap-2">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24"
+                        stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                    </svg>
+                    Cancella Cronologia
+                </button>
+            </div>
+            <div id="messageHistory" class="message-history space-y-4">
+                <!-- I messaggi verranno inseriti qui dinamicamente -->
+            </div>
+        </div>
     </div>
 
     <script>
+        // Gestione dello stato del nickname
+        let currentNickname = '';
+        const nicknameInput = document.getElementById('nickname');
+        const saveNicknameBtn = document.getElementById('saveNickname');
+        const currentNicknameDiv = document.getElementById('currentNickname');
+        const currentNicknameSpan = currentNicknameDiv.querySelector('span');
+        const editNicknameBtn = document.getElementById('editNickname');
+        const messageForm = document.getElementById('messageForm');
+
+        function updateNicknameUI(nickname) {
+            if (nickname) {
+                currentNickname = nickname;
+                currentNicknameSpan.textContent = nickname;
+                currentNicknameDiv.classList.remove('hidden');
+                nicknameInput.value = '';
+                nicknameInput.classList.add('hidden');
+                saveNicknameBtn.classList.add('hidden');
+            } else {
+                currentNicknameDiv.classList.add('hidden');
+                nicknameInput.classList.remove('hidden');
+                saveNicknameBtn.classList.remove('hidden');
+                nicknameInput.focus();
+            }
+        }
+
+        saveNicknameBtn.addEventListener('click', () => {
+            const nickname = nicknameInput.value.trim();
+            if (nickname) {
+                updateNicknameUI(nickname);
+                showStatus('Nickname salvato con successo!');
+            } else {
+                showStatus('Inserisci un nickname valido', true);
+            }
+        });
+
+        editNicknameBtn.addEventListener('click', () => {
+            nicknameInput.value = currentNickname;
+            updateNicknameUI('');
+        });
+
+        // Conteggio caratteri
         document.getElementById('message').addEventListener('input', function () {
             const charCount = this.value.length;
             document.getElementById('charCount').textContent = charCount;
         });
 
+        // Gestione status
         function showStatus(message, isError = false) {
             const statusDiv = document.getElementById('status');
             statusDiv.innerHTML = `<p class="text-lg font-semibold ${isError ? 'text-red-300' : 'text-green-300'}">${message}</p>`;
@@ -129,9 +231,68 @@
             }, 3000);
         }
 
-        document.getElementById('messageForm').addEventListener('submit', async function (e) {
+        // Gestione cronologia messaggi
+        let lastMessageTimestamp = null;
+
+        async function fetchAndUpdateMessages() {
+            try {
+                const response = await fetch('http://192.168.100.115:8000/api/messages');
+                if (response.ok) {
+                    const messages = await response.json();
+                    const messageHistory = document.getElementById('messageHistory');
+
+                    // Ordina i messaggi per timestamp (più recenti prima)
+                    messages.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+
+                    // Controlla se ci sono nuovi messaggi
+                    const latestMessageTimestamp = messages.length > 0 ? new Date(messages[0].timestamp) : null;
+
+                    if (!lastMessageTimestamp || (latestMessageTimestamp && latestMessageTimestamp > lastMessageTimestamp)) {
+                        // Aggiorna la UI solo se ci sono nuovi messaggi
+                        messageHistory.innerHTML = ''; // Pulisci la cronologia esistente
+
+                        messages.forEach(msg => {
+                            const messageElement = document.createElement('div');
+                            messageElement.className = 'bg-blue-800/30 p-4 rounded-lg border border-blue-400/20';
+                            const timestamp = new Date(msg.timestamp).toLocaleTimeString();
+                            messageElement.innerHTML = `
+                                <div class="flex justify-between items-start">
+                                    <span class="text-blue-200 font-semibold">${msg.nickname}</span>
+                                    <span class="text-blue-300 text-sm">${timestamp}</span>
+                                </div>
+                                <p class="text-blue-100 mt-2">${msg.message}</p>
+                            `;
+                            messageHistory.appendChild(messageElement);
+                        });
+
+                        lastMessageTimestamp = latestMessageTimestamp;
+                    }
+                }
+            } catch (error) {
+                console.error('Errore nel recupero dei messaggi:', error);
+            }
+        }
+
+        // Aggiorna i messaggi ogni 2 secondi
+        setInterval(fetchAndUpdateMessages, 2000);
+
+        // Carica i messaggi all'avvio
+        fetchAndUpdateMessages();
+
+        // Gestione form
+        messageForm.addEventListener('submit', async function (e) {
             e.preventDefault();
-            const message = document.getElementById('message').value;
+            const message = document.getElementById('message').value.trim();
+
+            if (!currentNickname) {
+                showStatus('Imposta prima il tuo nickname!', true);
+                return;
+            }
+
+            if (!message) {
+                showStatus('Inserisci un messaggio!', true);
+                return;
+            }
 
             try {
                 const response = await fetch('http://192.168.100.115:8000/api/arduino-message', {
@@ -139,19 +300,46 @@
                     headers: {
                         'Content-Type': 'application/json',
                     },
-                    body: JSON.stringify({ message })
+                    body: JSON.stringify({
+                        message,
+                        nickname: currentNickname
+                    })
                 });
 
                 if (response.ok) {
                     showStatus('Messaggio inviato con successo!');
+                    fetchAndUpdateMessages(); // Aggiorna immediatamente i messaggi
                     document.getElementById('message').value = '';
                     document.getElementById('charCount').textContent = '0';
                 } else {
-                    showStatus('Errore nell\'invio del messaggio.', true);
+                    const errorData = await response.json();
+                    showStatus(errorData.detail || 'Errore nell\'invio del messaggio.', true);
                 }
 
             } catch (error) {
                 showStatus('Errore di connessione.', true);
+                console.error('Errore:', error);
+            }
+        });
+
+        document.getElementById('clearHistory').addEventListener('click', async function () {
+            if (confirm('Sei sicuro di voler cancellare tutta la cronologia dei messaggi?')) {
+                try {
+                    const response = await fetch('http://192.168.100.115:8000/api/messages', {
+                        method: 'DELETE'
+                    });
+
+                    if (response.ok) {
+                        const messageHistory = document.getElementById('messageHistory');
+                        messageHistory.innerHTML = '';
+                        showStatus('Cronologia messaggi cancellata con successo!');
+                    } else {
+                        showStatus('Errore durante la cancellazione della cronologia.', true);
+                    }
+                } catch (error) {
+                    console.error('Errore:', error);
+                    showStatus('Errore di connessione.', true);
+                }
             }
         });
     </script>
