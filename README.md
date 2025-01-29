@@ -94,7 +94,7 @@ Gestisce il display LCD 16x2 e implementa la logica di visualizzazione dei messa
 2. **Gestione del display:**
    - Nickname > 16 caratteri: troncato con "..."
    - Contenuto > 16 caratteri: scorre automaticamente
-   - Velocità scroll: 300ms per carattere
+   - Velocità scroll: 500ms per carattere
    - Buffer anti-duplicati per evitare flickering
 
 3. **Sicurezza e validazione:**
